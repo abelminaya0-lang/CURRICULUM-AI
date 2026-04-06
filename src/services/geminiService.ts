@@ -13,19 +13,27 @@ export async function evaluateCV(cvText: string): Promise<EvaluationResult> {
   
   const response = await ai.models.generateContent({
     model,
-    contents: `Analiza el siguiente CV y clasifícalo como APTO o NO APTO según estos criterios:
-1. Experiencia mínima de 1 año en restaurante.
-2. Experiencia en cocina o atención al cliente.
-3. Edad aproximada entre 18 y 35 años.
+    contents: `Analiza el siguiente CV y clasifícalo como APTO o NO APTO según estos criterios estrictos:
 
-CV TEXT:
+1. SI EL PUESTO ES COCINERO:
+   - Experiencia mínima: 2 a 3 años.
+   - Edad permitida: Hasta 40 años (rango ideal 25-40).
+
+2. SI EL PUESTO ES MOZO:
+   - Experiencia: Con o sin experiencia (no es excluyente).
+   - Edad permitida: Estrictamente entre 20 y 28 años.
+
+3. PARA OTROS PUESTOS:
+   - Edad permitida: Entre 20 y 28 años.
+
+CV TEXT / CONTEXTO:
 ${cvText}
 
 Responde estrictamente en formato JSON con la siguiente estructura:
 {
   "resultado": "APTO" | "NO APTO",
-  "puntaje": número del 0 al 100,
-  "motivo": "explicación breve de por qué es apto o no"
+  "puntaje": número del 0 al 100 (basado en qué tanto cumple los requisitos),
+  "motivo": "explicación breve mencionando experiencia y edad"
 }`,
     config: {
       responseMimeType: "application/json",

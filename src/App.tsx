@@ -108,7 +108,15 @@ const CandidateForm = ({ onComplete }: { onComplete: () => void }) => {
       // 4. AI Evaluation in the background
       (async () => {
         try {
-          const result = await evaluateCV(`Nombre: ${formData.fullName}\nPuesto: ${formData.position}\nCV: ${file.name}`);
+          const result = await evaluateCV(`
+            DATOS DEL FORMULARIO:
+            - Nombre: ${formData.fullName}
+            - Puesto solicitado: ${formData.position}
+            - Teléfono: ${formData.phone}
+            
+            CONTENIDO DEL ARCHIVO (Nombre del archivo): ${file.name}
+            (Nota: El sistema analizará el texto del CV basándose en estos datos y el contenido extraído).
+          `);
           await updateDoc(doc(db, "candidates", docRef.id), {
             score: result.puntaje,
             aiReason: result.motivo,

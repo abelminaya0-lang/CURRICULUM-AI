@@ -1,5 +1,5 @@
 {
   "name": "AI Recruitment Automator",
-  "description": "Sistema de reclutamiento automático que utiliza Google Forms, Sheets y Gemini AI para filtrar CVs automáticamente.",
+  "description": "Sistema de reclutamiento con filtros específicos para Cocineros (2+ años exp, hasta 40 años) y Mozos (20-28 años).",
   "requestFramePermissions": []
 }
