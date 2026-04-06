@@ -23,7 +23,8 @@ import {
   Clock,
   ChevronRight,
   ShieldCheck,
-  Trash2
+  Trash2,
+  AlertCircle
 } from "lucide-react";
 import { 
   db, 
@@ -74,6 +75,7 @@ const CandidateForm = ({ onComplete }: { onComplete: () => void }) => {
   const [formData, setFormData] = useState({ fullName: "", phone: "", position: "" });
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,15 +83,18 @@ const CandidateForm = ({ onComplete }: { onComplete: () => void }) => {
     if (!file) return;
 
     setIsSubmitting(true);
+    setError(null);
     try {
       // 1. Upload File to Storage
       const storageRef = ref(storage, `cvs/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const cvUrl = await getDownloadURL(storageRef);
+      const uploadResult = await uploadBytes(storageRef, file);
+      const cvUrl = await getDownloadURL(uploadResult.ref);
 
       // 2. Add to Firestore
       const candidateData = {
-        ...formData,
+        fullName: formData.fullName,
+        phone: formData.phone,
+        position: formData.position,
         cvUrl,
         status: "PENDING",
         createdAt: serverTimestamp(),
@@ -101,10 +106,8 @@ const CandidateForm = ({ onComplete }: { onComplete: () => void }) => {
       onComplete();
 
       // 4. AI Evaluation in the background
-      // We don't 'await' this so the user doesn't have to wait for the AI to finish
       (async () => {
         try {
-          // Simple text extraction simulation
           const result = await evaluateCV(`Nombre: ${formData.fullName}\nPuesto: ${formData.position}\nCV: ${file.name}`);
           await updateDoc(doc(db, "candidates", docRef.id), {
             score: result.puntaje,
@@ -113,11 +116,11 @@ const CandidateForm = ({ onComplete }: { onComplete: () => void }) => {
           });
         } catch (aiError) {
           console.error("AI Evaluation failed:", aiError);
-          // If AI fails, we keep it as PENDING so the recruiter can review manually
         }
       })();
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, "candidates");
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      setError(err.message || "Error al enviar la postulación. Verifica tu conexión.");
     } finally {
       setIsSubmitting(false);
     }
@@ -130,6 +133,12 @@ const CandidateForm = ({ onComplete }: { onComplete: () => void }) => {
       onSubmit={handleSubmit} 
       className="space-y-6 bg-white p-8 rounded-3xl shadow-xl border border-slate-100"
     >
+      {error && (
+        <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-center gap-3 text-red-700 text-sm">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          {error}
+        </div>
+      )}
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
