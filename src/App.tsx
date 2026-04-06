@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   FileText, 
@@ -252,8 +253,8 @@ const SuccessMessage = () => (
       <CheckCircle2 className="w-12 h-12" />
     </div>
     <div className="space-y-2">
-      <h2 className="text-3xl font-black text-slate-900">¡Gracias por postular!</h2>
-      <p className="text-slate-500 text-lg">Hemos recibido tu CV. Nuestro equipo lo revisará y te llamaremos pronto.</p>
+      <h2 className="text-3xl font-black text-slate-900">¡Gracias!</h2>
+      <p className="text-slate-500 text-lg">Nos comunicaremos pronto contigo si calificas. Y si no, también nos comunicaremos contigo.</p>
     </div>
     <button 
       onClick={() => window.location.reload()}
@@ -363,8 +364,164 @@ const LoadingScreen = () => (
   </div>
 );
 
+const Header = ({ user, onLogin, onLogout }: { user: FirebaseUser | null, onLogin: () => void, onLogout: () => void }) => {
+  const navigate = useNavigate();
+  return (
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+          <div className="bg-indigo-600 p-2 rounded-lg">
+            <Cpu className="text-white w-5 h-5" />
+          </div>
+          <h1 className="font-bold text-xl tracking-tight hidden sm:block">AI Recruitment</h1>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden md:block">
+                <p className="text-xs font-bold">{user.displayName}</p>
+                <p className="text-[10px] text-slate-500">Administrador</p>
+              </div>
+              <button 
+                onClick={() => { onLogout(); navigate("/"); }}
+                className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+                title="Cerrar Sesión"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => navigate("/admin")}
+              className="text-sm font-bold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-xl transition-all flex items-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4" /> Acceso Reclutador
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+const CandidatePage = ({ submitted, setSubmitted }: { submitted: boolean, setSubmitted: (v: boolean) => void }) => (
+  <main className="max-w-6xl mx-auto px-6 py-12">
+    <div className="max-w-xl mx-auto space-y-8">
+      <div className="text-center space-y-3">
+        <h2 className="text-4xl font-black text-slate-900">Únete a nuestro equipo</h2>
+        <p className="text-slate-500 text-lg">Sube tu CV y deja que nuestra IA analice tu perfil en segundos.</p>
+      </div>
+      {submitted ? <SuccessMessage /> : <CandidateForm onComplete={() => setSubmitted(true)} />}
+    </div>
+  </main>
+);
+
+const RecruiterPage = ({ user, candidates, onLogin }: { user: FirebaseUser | null, candidates: Candidate[], onLogin: () => void }) => {
+  if (!user) {
+    return (
+      <main className="max-w-6xl mx-auto px-6 py-12">
+        <div className="max-w-md mx-auto bg-white p-10 rounded-3xl shadow-xl border border-slate-100 text-center space-y-6">
+          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-900">Acceso Restringido</h2>
+            <p className="text-slate-500">Debes iniciar sesión como administrador para ver las postulaciones.</p>
+          </div>
+          <button 
+            onClick={onLogin}
+            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+          >
+            <LogIn className="w-5 h-5" /> Iniciar Sesión con Google
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const approvedCandidates = candidates.filter(c => c.status === "APPROVED");
+  const rejectedCandidates = candidates.filter(c => c.status === "REJECTED");
+  const pendingCandidates = candidates.filter(c => c.status === "PENDING");
+
+  return (
+    <main className="max-w-6xl mx-auto px-6 py-12">
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-black text-slate-900">Panel de Reclutamiento</h2>
+            <p className="text-slate-500">Gestiona y revisa las postulaciones filtradas por IA.</p>
+          </div>
+          <div className="flex gap-4">
+            <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
+              <span className="text-xl font-black text-indigo-600">{candidates.length}</span>
+            </div>
+            <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Aprobados</span>
+              <span className="text-xl font-black text-green-600">{approvedCandidates.length}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Column: Approved */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                <CheckCircle2 className="text-green-500 w-5 h-5" /> Aprobados por IA
+              </h3>
+              <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">{approvedCandidates.length}</span>
+            </div>
+            <div className="space-y-4 min-h-[200px] bg-slate-100/50 p-4 rounded-3xl border border-slate-200/50">
+              {approvedCandidates.length === 0 ? (
+                <p className="text-center text-slate-400 text-xs py-10">No hay candidatos aprobados aún.</p>
+              ) : (
+                approvedCandidates.map(c => <CandidateCard key={c.id} candidate={c} />)
+              )}
+            </div>
+          </div>
+
+          {/* Column: Pending / Review */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                <Clock className="text-amber-500 w-5 h-5" /> En Revisión
+              </h3>
+              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{pendingCandidates.length}</span>
+            </div>
+            <div className="space-y-4 min-h-[200px] bg-slate-100/50 p-4 rounded-3xl border border-slate-200/50">
+              {pendingCandidates.length === 0 ? (
+                <p className="text-center text-slate-400 text-xs py-10">No hay candidatos pendientes.</p>
+              ) : (
+                pendingCandidates.map(c => <CandidateCard key={c.id} candidate={c} />)
+              )}
+            </div>
+          </div>
+
+          {/* Column: Rejected */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                <XCircle className="text-red-500 w-5 h-5" /> No Aptos
+              </h3>
+              <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{rejectedCandidates.length}</span>
+            </div>
+            <div className="space-y-4 min-h-[200px] bg-slate-100/50 p-4 rounded-3xl border border-slate-200/50">
+              {rejectedCandidates.length === 0 ? (
+                <p className="text-center text-slate-400 text-xs py-10">No hay candidatos rechazados.</p>
+              ) : (
+                rejectedCandidates.map(c => <CandidateCard key={c.id} candidate={c} />)
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+};
+
 export default function App() {
-  const [view, setView] = useState<"candidate" | "recruiter">("candidate");
   const [submitted, setSubmitted] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -393,7 +550,6 @@ export default function App() {
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-      setView("recruiter");
     } catch (error) {
       console.error(error);
     }
@@ -401,144 +557,28 @@ export default function App() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    setView("candidate");
   };
-
-  const approvedCandidates = candidates.filter(c => c.status === "APPROVED");
-  const rejectedCandidates = candidates.filter(c => c.status === "REJECTED");
-  const pendingCandidates = candidates.filter(c => c.status === "PENDING");
 
   if (isLoading) return <LoadingScreen />;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-2 rounded-lg">
-              <Cpu className="text-white w-5 h-5" />
-            </div>
-            <h1 className="font-bold text-xl tracking-tight hidden sm:block">AI Recruitment</h1>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <div className="text-right hidden md:block">
-                  <p className="text-xs font-bold">{user.displayName}</p>
-                  <p className="text-[10px] text-slate-500">Administrador</p>
-                </div>
-                <button 
-                  onClick={handleLogout}
-                  className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
-                  title="Cerrar Sesión"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={handleLogin}
-                className="text-sm font-bold text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-xl transition-all flex items-center gap-2"
-              >
-                <ShieldCheck className="w-4 h-4" /> Acceso Reclutador
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+    <BrowserRouter>
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+        <Header user={user} onLogin={handleLogin} onLogout={handleLogout} />
+        
+        <Routes>
+          <Route path="/" element={<CandidatePage submitted={submitted} setSubmitted={setSubmitted} />} />
+          <Route path="/admin" element={<RecruiterPage user={user} candidates={candidates} onLogin={handleLogin} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
 
-      <main className="max-w-6xl mx-auto px-6 py-12">
-        {view === "candidate" ? (
-          <div className="max-w-xl mx-auto space-y-8">
-            <div className="text-center space-y-3">
-              <h2 className="text-4xl font-black text-slate-900">Únete a nuestro equipo</h2>
-              <p className="text-slate-500 text-lg">Sube tu CV y deja que nuestra IA analice tu perfil en segundos.</p>
-            </div>
-            {submitted ? <SuccessMessage /> : <CandidateForm onComplete={() => setSubmitted(true)} />}
-          </div>
-        ) : (
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1">
-                <h2 className="text-3xl font-black text-slate-900">Panel de Reclutamiento</h2>
-                <p className="text-slate-500">Gestiona y revisa las postulaciones filtradas por IA.</p>
-              </div>
-              <div className="flex gap-4">
-                <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
-                  <span className="text-xl font-black text-indigo-600">{candidates.length}</span>
-                </div>
-                <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Aprobados</span>
-                  <span className="text-xl font-black text-green-600">{approvedCandidates.length}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Column: Approved */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                    <CheckCircle2 className="text-green-500 w-5 h-5" /> Aprobados por IA
-                  </h3>
-                  <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">{approvedCandidates.length}</span>
-                </div>
-                <div className="space-y-4 min-h-[200px] bg-slate-100/50 p-4 rounded-3xl border border-slate-200/50">
-                  {approvedCandidates.length === 0 ? (
-                    <p className="text-center text-slate-400 text-xs py-10">No hay candidatos aprobados aún.</p>
-                  ) : (
-                    approvedCandidates.map(c => <CandidateCard key={c.id} candidate={c} />)
-                  )}
-                </div>
-              </div>
-
-              {/* Column: Pending / Review */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                    <Clock className="text-amber-500 w-5 h-5" /> En Revisión
-                  </h3>
-                  <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{pendingCandidates.length}</span>
-                </div>
-                <div className="space-y-4 min-h-[200px] bg-slate-100/50 p-4 rounded-3xl border border-slate-200/50">
-                  {pendingCandidates.length === 0 ? (
-                    <p className="text-center text-slate-400 text-xs py-10">No hay candidatos pendientes.</p>
-                  ) : (
-                    pendingCandidates.map(c => <CandidateCard key={c.id} candidate={c} />)
-                  )}
-                </div>
-              </div>
-
-              {/* Column: Rejected */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                    <XCircle className="text-red-500 w-5 h-5" /> No Aptos
-                  </h3>
-                  <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{rejectedCandidates.length}</span>
-                </div>
-                <div className="space-y-4 min-h-[200px] bg-slate-100/50 p-4 rounded-3xl border border-slate-200/50">
-                  {rejectedCandidates.length === 0 ? (
-                    <p className="text-center text-slate-400 text-xs py-10">No hay candidatos rechazados.</p>
-                  ) : (
-                    rejectedCandidates.map(c => <CandidateCard key={c.id} candidate={c} />)
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="max-w-6xl mx-auto px-6 py-12 border-t border-slate-200 text-center">
-        <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
-          AI Recruitment System • {new Date().getFullYear()}
-        </p>
-      </footer>
-    </div>
+        {/* Footer */}
+        <footer className="max-w-6xl mx-auto px-6 py-12 border-t border-slate-200 text-center">
+          <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
+            AI Recruitment System • {new Date().getFullYear()}
+          </p>
+        </footer>
+      </div>
+    </BrowserRouter>
   );
 }
