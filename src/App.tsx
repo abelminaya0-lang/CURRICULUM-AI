@@ -97,23 +97,25 @@ const CandidateForm = ({ onComplete }: { onComplete: () => void }) => {
 
       const docRef = await addDoc(collection(db, "candidates"), candidateData);
 
-      // 3. AI Evaluation (Side effect)
-      // We'll do it here for the demo, in a real app this might be a cloud function
-      // but the user asked for it to be automatic.
-      try {
-        // Simple text extraction simulation (since we don't have a backend to parse PDF)
-        // In a real scenario, we'd use a library or service. For now, we use the name/pos as context.
-        const result = await evaluateCV(`Nombre: ${formData.fullName}\nPuesto: ${formData.position}\nCV: ${file.name}`);
-        await updateDoc(doc(db, "candidates", docRef.id), {
-          score: result.puntaje,
-          aiReason: result.motivo,
-          status: result.resultado === "APTO" ? "APPROVED" : "REJECTED"
-        });
-      } catch (aiError) {
-        console.error("AI Evaluation failed:", aiError);
-      }
-
+      // 3. Show success message immediately
       onComplete();
+
+      // 4. AI Evaluation in the background
+      // We don't 'await' this so the user doesn't have to wait for the AI to finish
+      (async () => {
+        try {
+          // Simple text extraction simulation
+          const result = await evaluateCV(`Nombre: ${formData.fullName}\nPuesto: ${formData.position}\nCV: ${file.name}`);
+          await updateDoc(doc(db, "candidates", docRef.id), {
+            score: result.puntaje,
+            aiReason: result.motivo,
+            status: result.resultado === "APTO" ? "APPROVED" : "REJECTED"
+          });
+        } catch (aiError) {
+          console.error("AI Evaluation failed:", aiError);
+          // If AI fails, we keep it as PENDING so the recruiter can review manually
+        }
+      })();
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, "candidates");
     } finally {
@@ -332,6 +334,18 @@ const CandidateCard = ({ candidate }: { candidate: Candidate }) => {
   );
 };
 
+const LoadingScreen = () => (
+  <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
+    <div className="bg-indigo-600 p-3 rounded-2xl animate-bounce">
+      <Cpu className="text-white w-8 h-8" />
+    </div>
+    <div className="flex items-center gap-2 text-slate-400 font-medium">
+      <Loader2 className="w-4 h-4 animate-spin" />
+      Cargando sistema...
+    </div>
+  </div>
+);
+
 export default function App() {
   const [view, setView] = useState<"candidate" | "recruiter">("candidate");
   const [submitted, setSubmitted] = useState(false);
@@ -376,6 +390,8 @@ export default function App() {
   const approvedCandidates = candidates.filter(c => c.status === "APPROVED");
   const rejectedCandidates = candidates.filter(c => c.status === "REJECTED");
   const pendingCandidates = candidates.filter(c => c.status === "PENDING");
+
+  if (isLoading) return <LoadingScreen />;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
