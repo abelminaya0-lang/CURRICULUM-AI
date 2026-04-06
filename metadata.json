@@ -1,0 +1,5 @@
+{
+  "name": "AI Recruitment Automator",
+  "description": "Sistema de reclutamiento automático que utiliza Google Forms, Sheets y Gemini AI para filtrar CVs automáticamente.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "Candidate": {
+      "title": "Candidate",
+      "description": "A job applicant with their CV and AI evaluation results.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "position": { "type": "string" },
+        "cvUrl": { "type": "string" },
+        "cvText": { "type": "string" },
+        "status": { 
+          "type": "string",
+          "enum": ["PENDING", "APPROVED", "REJECTED"]
+        },
+        "score": { "type": "number" },
+        "aiReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "phone", "position", "cvUrl", "status"]
+    }
+  },
+  "firestore": {
+    "/candidates/{candidateId}": {
+      "schema": "Candidate",
+      "description": "Collection of job candidates."
+    }
+  }
+}
